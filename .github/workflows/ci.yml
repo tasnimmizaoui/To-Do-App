@@ -1,0 +1,41 @@
+name: CI
+on:
+ push:
+    branches : [main]
+ pull_request:
+    branches: [main]
+jobs:
+    backend :
+        runs-on : ubuntu-latest
+        defaults:
+            run :
+                working-directory: ./backend
+        steps:
+          - uses: actions/checkout@v3
+          - name: Set up Python 
+            uses: actions/setup-python 
+            with:
+              python-version: '3.10'
+          - name: Install dependencies
+            run:  pip install -r requirements.txt
+          - name: Run linit   # Pylint tests 
+            run: | 
+              pip install black flake8
+              black --check .
+              flake8 .
+    
+    frontend :
+        runs-on: ubuntu-latest
+        defaults: 
+            run : 
+             working-directory : ./frontend
+        steps: 
+              - uses: actions/checkout@v3
+              - name: setup Node.js 
+                uses : actions/setup-node@v3
+                with:
+                    node-version: '18'
+              - run: npm insatll 
+              - run: npm run build 
+              - run: npm run lint  
+            
