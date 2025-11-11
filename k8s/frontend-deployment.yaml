@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-frontend
+  namespace: todo-dev
+  labels:
+    app: todo-frontend
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: tasnimmizaoui/todo-frontend:latest
+        ports:
+          - containerPort: 3000
+        env:
+        - name: REACT_APP_API_URL
+          value: "http://todo-backend-service.todo-dev.svc.cluster.local:5000"
+        
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10

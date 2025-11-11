@@ -13,7 +13,7 @@ WORKDIR /app
 
 COPY package*.json ./
 # Install dependencies
-RUN npm ci 
+RUN npm ci  
 COPY . .
 
 # Set API URL to relative path so nginx can proxy it
