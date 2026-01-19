@@ -104,41 +104,5 @@ todo-app/
 └── docker-compose.yml # Local development
 ```
 
-## 🎓 DevOps Skills Demonstrated
 
-This project proves hands-on experience with:
 
-1. **Infrastructure as Code**: All infrastructure defined in YAML
-2. **Container Orchestration**: Multi-service deployment and management
-3. **Service Mesh Basics**: Internal networking and service discovery
-4. **Monitoring**: Application health checking and recovery
-5. **Troubleshooting**: Real-world problem solving in Kubernetes
-
-## 🚧 Known Limitations & Learning Opportunities
-
-- **Ingress**: Configured but requires additional setup for full functionality
-- **Database**: Uses SQLite - ready to upgrade to PostgreSQL for production learning
-- **CI/CD**: Manual deployment - ready for GitHub Actions pipeline implementation
-- **Monitoring**: Basic health checks - ready for Prometheus/Grafana integration
-
-## 🔜 Next Learning Steps
-
-This project is perfectly positioned for:
-1. **CI/CD Pipeline**: Add GitHub Actions for automated testing and deployment
-2. **Database Upgrade**: Replace SQLite with PostgreSQL + persistent volumes
-3. **Monitoring Stack**: Add Prometheus metrics and Grafana dashboards
-4. **Service Mesh**: Implement Istio for advanced traffic management
-
-## 💡 Why This Matters for DevOps Roles
-
-This isn't just another "todo app" - it's a **demonstration of production-ready DevOps skills**:
-- Real containerization strategies
-- Actual Kubernetes deployment experience
-- Hands-on troubleshooting of real infrastructure issues
-- Understanding of service mesh and networking concepts
-
-The challenges solved here (networking, health checks, resource management) are exactly what DevOps engineers face daily.
-
----
-
-**Built to learn, documented to demonstrate real DevOps competency.** 🚀
