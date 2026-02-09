@@ -24,11 +24,20 @@ spec:
         - containerPort: 5000
         env:
         - name: FLASK_ENV
-          value: "development"
+          valueFrom:
+            secretKeyRef:
+              name: todo-backend-secret
+              key: FLASK_ENV
         - name: DATABASE_URL
-          value: "sqlite:///app/todo.db"
+          value: "sqlite:///app/data/todos.db"
         - name: SECRET_KEY
-          value: "dev-secret-key"
+          valueFrom:
+            secretKeyRef:
+              name: todo-backend-secret
+              key: SECRET_KEY
+        volumeMounts:
+        - name: todo-data
+          mountPath: /app/data
         resources:
           requests:
             memory: "128Mi"
@@ -48,3 +57,7 @@ spec:
             port: 5000
           initialDelaySeconds: 5
           periodSeconds: 5
+      volumes:
+      - name: todo-data
+        persistentVolumeClaim:
+          claimName: todo-backend-data
