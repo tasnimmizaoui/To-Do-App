@@ -3,6 +3,10 @@ name: CD
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'k8s/**'
 
 env:
   BACKEND_IMAGE: tasnimmizaoui/todo-backend
@@ -10,9 +14,37 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────
+  # Stage 0: Detect what changed
+  # ──────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend_any_changed }}
+      frontend: ${{ steps.filter.outputs.frontend_any_changed }}
+      k8s: ${{ steps.filter.outputs.k8s_any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # Need previous commit to diff against
+
+      - name: Detect changed files
+        id: filter
+        uses: tj-actions/changed-files@v44
+        with:
+          files_yaml: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            k8s:
+              - 'k8s/**'
+
+  # ──────────────────────────────────────────────
   # Stage 1: Build & Push Docker images
   # ──────────────────────────────────────────────
   build-and-push:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
@@ -35,8 +67,9 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build & push backend
+      # Build & push backend — only if backend files changed
       - name: Build and push backend
+        if: needs.changes.outputs.backend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -47,8 +80,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Build & push frontend
+      # Build & push frontend — only if frontend files changed
       - name: Build and push frontend
+        if: needs.changes.outputs.frontend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
@@ -60,53 +94,25 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ──────────────────────────────────────────────────────────
-  # Stage 2: Deploy to Kubernetes (Minikube / self-hosted)
+  # Stage 2: commits the new tag back to the repo
   # ──────────────────────────────────────────────────────────
-  deploy:
-    needs: build-and-push
-    runs-on: self-hosted       
-    environment: dev
+  update-manifests:
+    needs: [changes, build-and-push]
+    if: needs.build-and-push.result == 'success'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set image tag
+      - name: Update image tags in manifests
         run: |
-          echo "TAG=${{ needs.build-and-push.outputs.image_tag }}" >> "$GITHUB_ENV"
-          echo "Deploying tag: ${{ needs.build-and-push.outputs.image_tag }}"
+          TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          sed -i "s|tasnimmizaoui/todo-backend:.*|tasnimmizaoui/todo-backend:${TAG}|g" k8s/backend-deployment.yaml
+          sed -i "s|tasnimmizaoui/todo-frontend:.*|tasnimmizaoui/todo-frontend:${TAG}|g" k8s/frontend-deployment.yaml
 
-      # Update image tags in manifests
-      - name: Update K8s manifests with new image tag
+      - name: Commit and push updated manifests
         run: |
-          sed -i "s|tasnimmizaoui/todo-backend:.*|tasnimmizaoui/todo-backend:${{ needs.build-and-push.outputs.image_tag }}|g" k8s/backend-deployment.yaml
-          sed -i "s|tasnimmizaoui/todo-frontend:.*|tasnimmizaoui/todo-frontend:${{ needs.build-and-push.outputs.image_tag }}|g" k8s/frontend-deployment.yaml
-
-      # Apply all K8s resources in order
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/backend-secret.yaml
-          kubectl apply -f k8s/backend-pvc.yaml
-          kubectl apply -f k8s/backend-deployment.yaml
-          kubectl apply -f k8s/backend-service.yaml
-          kubectl apply -f k8s/frontend-deployment.yaml
-          kubectl apply -f k8s/frontend-service.yaml
-          kubectl apply -f k8s/ingress.yaml
-
-      # Wait for rollout
-      - name: Wait for backend rollout
-        run: kubectl rollout status deployment/todo-backend -n todo-dev --timeout=120s
-
-      - name: Wait for frontend rollout
-        run: kubectl rollout status deployment/todo-frontend -n todo-dev --timeout=120s
-
-      # Verify deployment
-      - name: Verify deployment
-        run: |
-          echo "=== Pods ==="
-          kubectl get pods -n todo-dev
-          echo ""
-          echo "=== Services ==="
-          kubectl get svc -n todo-dev
-          echo ""
-          echo "=== Ingress ==="
-          kubectl get ingress -n todo-dev
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/
+          git diff --staged --quiet || git commit -m "chore: update image tags to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]"
+          git push
