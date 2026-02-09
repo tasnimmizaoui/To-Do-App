@@ -18,6 +18,13 @@ import {
 
 const API_BASE = process.env.REACT_APP_API_URL || "/api"
 
+// Customizable durations (in seconds)
+const DURATIONS = {
+  work: 25 * 60,
+  break: 5 * 60,
+  longBreak: 15 * 60,
+}
+
 export default function TodoApp() {
   const [todos, setTodos] = useState([])
   const [newTask, setNewTask] = useState("")
@@ -44,12 +51,7 @@ export default function TodoApp() {
   const audioRef = useRef(null)
   const pauseStartRef = useRef(null)
 
-  // Customizable durations (in minutes)
-  const DURATIONS = {
-    work: 25 * 60,
-    break: 5 * 60,
-    longBreak: 15 * 60,
-  }
+
 
   // Data fetching
   const fetchTodos = useCallback(async () => {
@@ -154,7 +156,7 @@ export default function TodoApp() {
   }
 
   // Enhanced Pomodoro API helpers
-  const startPomodoro = async () => {
+  const startPomodoro = useCallback(async () => {
     const duration = DURATIONS[sessionType] / 60 // Convert to minutes for API
     try {
       const res = await fetch(`${API_BASE}/pomodoro/sessions`, {
@@ -180,7 +182,7 @@ export default function TodoApp() {
     } catch (e) {
       setError(`Start session: ${e.message}`)
     }
-  }
+  }, [sessionType, selectedTaskId])
 
   const completeSession = useCallback(async () => {
     if (!currentSession) return
@@ -213,7 +215,7 @@ export default function TodoApp() {
     } catch (e) {
       setError(`Complete session: ${e.message}`)
     }
-  }, [currentSession, sessionType, soundEnabled])
+  }, [currentSession, sessionType, soundEnabled, fetchStats])
 
   // Enhanced Timer logic with better accuracy
   useEffect(() => {
@@ -327,9 +329,11 @@ export default function TodoApp() {
           e.preventDefault()
           setSoundEnabled((prev) => !prev)
           break
+        default:
+          break
       }
     },
-    [currentSession, isPaused, isTimerRunning, pauseTimer, resumeTimer, resetTimer, switchSessionType],
+    [currentSession, isPaused, isTimerRunning, pauseTimer, resumeTimer, resetTimer, switchSessionType, startPomodoro],
   )
 
   useEffect(() => {
