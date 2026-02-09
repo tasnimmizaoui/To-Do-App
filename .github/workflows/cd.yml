@@ -71,14 +71,14 @@ jobs:
 
       - name: Set image tag
         run: |
-          TAG="${{ needs.build-and-push.outputs.image_tag }}"
-          echo "Deploying tag: $TAG"
+          echo "TAG=${{ needs.build-and-push.outputs.image_tag }}" >> "$GITHUB_ENV"
+          echo "Deploying tag: ${{ needs.build-and-push.outputs.image_tag }}"
 
       # Update image tags in manifests
       - name: Update K8s manifests with new image tag
         run: |
-          sed -i "s|tasnimmizaoui/todo-backend:.*|tasnimmizaoui/todo-backend:${TAG}|g" k8s/backend-deployment.yaml
-          sed -i "s|tasnimmizaoui/todo-frontend:.*|tasnimmizaoui/todo-frontend:${TAG}|g" k8s/frontend-deployment.yaml
+          sed -i "s|tasnimmizaoui/todo-backend:.*|tasnimmizaoui/todo-backend:${{ needs.build-and-push.outputs.image_tag }}|g" k8s/backend-deployment.yaml
+          sed -i "s|tasnimmizaoui/todo-frontend:.*|tasnimmizaoui/todo-frontend:${{ needs.build-and-push.outputs.image_tag }}|g" k8s/frontend-deployment.yaml
 
       # Apply all K8s resources in order
       - name: Deploy to Kubernetes
