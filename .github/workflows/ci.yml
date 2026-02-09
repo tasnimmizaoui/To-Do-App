@@ -1,41 +1,65 @@
 name: CI
+
 on:
- push:
-    branches : [main , develop]
- pull_request:
+  push:
+    branches: [main, develop]
+  pull_request:
     branches: [main]
+
 jobs:
-    backend :
-        runs-on : ubuntu-latest
-        defaults:
-            run :
-                working-directory: ./backend
-        steps:
-          - uses: actions/checkout@v3
-          - name: Set up Python 
-            uses: actions/setup-python 
-            with:
-              python-version: '3.10'
-          - name: Install dependencies
-            run:  pip install -r requirements.txt
-          - name: Run linit   # Pylint tests 
-            run: | 
-              pip install black flake8
-              black --check .
-              flake8 .
-    
-    frontend :
-        runs-on: ubuntu-latest
-        defaults: 
-            run : 
-             working-directory : ./frontend
-        steps: 
-              - uses: actions/checkout@v3
-              - name: setup Node.js 
-                uses : actions/setup-node@v3
-                with:
-                    node-version: '18'
-              - run: npm insatll 
-              - run: npm run build 
-              - run: npm run lint  
-            
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Cache BEFORE install to ensure we restore the cache before trying to install dependencies
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      # Install (will use cache if available)
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run linter
+        run: |
+          pip install black flake8
+          black --check .
+          flake8 .
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Cache BEFORE install 
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
